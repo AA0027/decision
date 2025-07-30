@@ -16,8 +16,11 @@
 #include <QStandardItemModel>
 #include <QMessageBox>
 #include <QResizeEvent>
-#include <QtMultimediaWidgets/qvideowidget.h>
+#include <QMovie>
+#include <QTimer>
+#include <QThread>
 
+#include "imageloader.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -54,6 +57,8 @@ private slots:
     // slider 이벤트
     void onSliderChanged(int value);
 
+    void play();
+
 
 private:
     // window의 center widget
@@ -84,9 +89,12 @@ private:
 
     // 동영상 재생관련 변수
     QTimer* timer;
+
     QStringList imageList;
     QLabel* frameInfo;
 
+    std::vector<QPixmap> video;
+    QMovie* loadingMovie;
     bool isPlaying;
     int currentFrame;
 
@@ -104,20 +112,39 @@ private:
     void updateFrame();
     void updateSlider();
 
+
+
     void resizeEvent(QResizeEvent* event) override
     {
-        if (!imageList.isEmpty() && currentFrame < imageList.size()) {
-            QPixmap pixmap(imageList[currentFrame]);
-            if (!pixmap.isNull()) {
-                // 이미지 레이블 크기에 맞게 스케일링
-                QPixmap scaledPixmap = pixmap.scaled(
-                    videoView->size(),
-                    Qt::KeepAspectRatio,
-                    Qt::SmoothTransformation
-                    );
-                videoView->setPixmap(scaledPixmap);
-            }
+        if(!imageList.isEmpty())
+        {
+            videoView -> setMovie(loadingMovie);
+            videoView -> setAlignment(Qt::AlignCenter);
+            loadingMovie -> start();
+
+            QThread* thread = new QThread;
+            ImageLoader* loader = new ImageLoader(imageList, videoView);
+            loader->moveToThread(thread);
+
+            // 작업 완료 시 처리
+            connect(loader, &ImageLoader::imagesLoaded, this, [=](const std::vector<QPixmap>& loadedImages) {
+                loadingMovie->stop();
+                videoView->clear();
+                video = loadedImages;
+
+
+                loader->deleteLater();
+                thread->quit();
+                thread->deleteLater();
+            });
+
+            // 스레드 시작 시 작업 수행
+            connect(thread, &QThread::started, loader, &ImageLoader::loadImages);
+
+            // 시작
+            thread->start();
         }
+
         QMainWindow::resizeEvent(event);
     }
 };

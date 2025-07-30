@@ -11,8 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets Multimedias Gui)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Multimedia)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets Multimedias Gui Concurrent)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Multimedia GUI Concurrent)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -25,6 +25,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         resourc.qrc
+        imageloader.h
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET decision APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -49,6 +50,7 @@ target_link_libraries(decision PRIVATE
   Qt${QT_VERSION_MAJOR}::Widgets
   Qt${QT_VERSION_MAJOR}::Multimedia
   Qt${QT_VERSION_MAJOR}::Gui
+  Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

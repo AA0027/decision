@@ -1,6 +1,4 @@
 #include "mainwindow.h"
-#include <QTimer>
-
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
     viewModel(new QStandardItemModel(this)), isPlaying(false)
@@ -23,6 +21,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
         "    min-width: 300px;"
         "}"
         );
+
+    loadingMovie = new QMovie(":/loading.gif", QByteArray(), this);
+
 }
 
 // slots
@@ -78,6 +79,7 @@ void MainWindow::selectFolder()
     QStandardItem* includeFolder = new QStandardItem(folderIcon, dir.dirName());
     QList<QStandardItem*> subFiles;
 
+
     for(int i = 0; i < 5; i++)
     {
         subFiles.emplaceBack(new QStandardItem(imageIcon, imageFiles[i]));
@@ -90,6 +92,7 @@ void MainWindow::selectFolder()
 
     msgBox.setWindowTitle("정보");
     msgBox.setText(QString("총 %1개의 이미지를 불러왔습니다.").arg(imageFiles.size()));
+
     msgBox.exec();
 }
 
@@ -143,13 +146,69 @@ void MainWindow::preparePlay(const QModelIndex &index)
         slider->setRange(0, imageList.size() - 1);
         slider->setValue(0);
 
-        updateFrame();
-        updateSlider();
 
-        msgBox.setWindowTitle("정보");
-        msgBox.setText("동영상 재생 준비 완료");
-        msgBox.exec();
+
+
+        videoView -> setMovie(loadingMovie);
+        videoView -> setAlignment(Qt::AlignCenter);
+        loadingMovie -> start();
+
+        QThread* thread = new QThread;
+        ImageLoader* loader = new ImageLoader(imageList, videoView);
+        loader->moveToThread(thread);
+
+        // 작업 완료 시 처리
+        connect(loader, &ImageLoader::imagesLoaded, this, [=](const std::vector<QPixmap>& loadedImages) {
+            loadingMovie->stop();
+            videoView->clear();
+            video = loadedImages;
+
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("정보");
+            msgBox.setText("동영상 재생 준비 완료");
+            msgBox.exec();
+
+            loader->deleteLater();
+            thread->quit();
+            thread->deleteLater();
+        });
+
+        // 스레드 시작 시 작업 수행
+        connect(thread, &QThread::started, loader, &ImageLoader::loadImages);
+
+        // 시작
+        thread->start();
+
+        // for(int i = 0; i < imageList.size(); i++)
+        // {
+        //     QPixmap pixmap(imageList[i]);
+        //     if (!pixmap.isNull()) {
+        //         // 이미지 레이블 크기에 맞게 스케일링
+        //         video.emplace_back(pixmap);
+        //     }
+        // }
+
+        // loadingMovie->stop();
+        // videoView->clear();
+
+        // msgBox.setWindowTitle("정보");
+        // msgBox.setText("동영상 재생 준비 완료");
+        // msgBox.exec();
+
     }
+}
+
+void MainWindow::play()
+{
+    QPixmap frame = video[currentFrame].scaled(
+        videoView->size(),
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+        );
+    videoView->setPixmap(frame);
+    frameInfo->setText(
+        QString("프레임: %1 / %2").arg(currentFrame + 1).arg(video.size())
+        );
 }
 
 // 컨텍스트 메뉴 뜨우기 (slots)
@@ -227,10 +286,10 @@ void MainWindow::stop()
 // 다음 프레임 (slots)
 void MainWindow::nextFrame()
 {
-    if(!imageList.isEmpty())
+    if(!video.empty())
     {
-        currentFrame = (currentFrame + 1) % imageList.size();
-        updateFrame();
+        currentFrame = (currentFrame + 1) % video.size();
+        play();
         updateSlider();
     }
 }
@@ -375,6 +434,7 @@ void MainWindow::screenViewer()
     screenLayout -> addWidget(videoView, 5);
     screenLayout -> addWidget(slider, 2);
     screenLayout -> addLayout(bottomLayout);
+
 }
 
 void MainWindow::customPushBtn(QPushButton* btn)
@@ -405,6 +465,7 @@ void MainWindow::setupTimer()
 
 void MainWindow::updateFrame()
 {
+
     if (!imageList.isEmpty() && currentFrame < imageList.size()) {
         QPixmap pixmap(imageList[currentFrame]);
         if (!pixmap.isNull()) {
