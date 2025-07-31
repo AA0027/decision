@@ -16,8 +16,6 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Multimedia G
 
 set(PROJECT_SOURCES
         main.cpp
-        mainwindow.cpp
-        mainwindow.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -26,6 +24,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         resourc.qrc
         imageloader.h
+        decision.h decision.cpp
+        sidemenu.h sidemenu.cpp
+        displaywidget.h displaywidget.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET decision APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
