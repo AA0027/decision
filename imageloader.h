@@ -31,7 +31,7 @@ public slots:
                 loaded.push_back(scaledPixmap);
                 count++;
 
-                if(loaded.size() == 70 || (count == imageList.size()))
+                if(loaded.size() == 50 || (count == imageList.size()))
                 {
                     emit imagesLoaded(loaded);
                     loaded.clear();

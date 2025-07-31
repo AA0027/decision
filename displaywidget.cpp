@@ -7,7 +7,9 @@
 DisplayWidget::DisplayWidget(QWidget* parent) : QWidget(parent), isPlaying(false)
 {
     setupTimer();
+    connect(this, &DisplayWidget::bufferIsNotReady, this, &DisplayWidget::loading);
 
+    msgBox.styleSheet();
     QVBoxLayout* screenLayout = new QVBoxLayout(this);
 
     videoView = new QLabel();
@@ -170,9 +172,22 @@ void DisplayWidget::nextFrame()
 {
     if(!video.empty())
     {
-        currentFrame = (currentFrame + 1) % imageList.size();
+        if(video.size() == currentFrame + 1)
+        {
+            stop();
+            return;
+        }
+
+        if(video.size() <= currentFrame + 1)
+        {
+            emit bufferIsNotReady();
+            return;
+        }
+         // vector 에러처리필요?
+        currentFrame = (currentFrame + 1);
         play();
         updateSlider();
+
     }
 }
 
@@ -181,7 +196,8 @@ void DisplayWidget::nextFrame()
 void DisplayWidget::previousFrame()
 {
     if (!imageList.empty()) {
-        currentFrame = (currentFrame - 1 + imageList.size()) % imageList.size();
+        // vector 에러처리필요?
+        currentFrame = (currentFrame - 1 + imageList.size());
         play();
         updateSlider();
     }
@@ -196,18 +212,25 @@ void DisplayWidget::onSliderChanged(int value)
     }
 }
 
+// 동영상이 계속 재생되게
 void DisplayWidget::play()
 {
-    QPixmap frame = video[currentFrame].scaled(
-        videoView->size(),
-        Qt::KeepAspectRatio,
-        Qt::SmoothTransformation
-        );
-    videoView->setPixmap(frame);
+
+    videoView->setPixmap(video[currentFrame]);
     frameInfo->setText(
         QString("프레임: %1 / %2").arg(currentFrame + 1).arg(imageList.size())
         );
+
 }
+
+// 로딩표시
+void DisplayWidget::loading()
+{
+    videoView -> setMovie(loadingMovie);
+    videoView -> setAlignment(Qt::AlignCenter);
+    loadingMovie -> start();
+}
+
 //  ============== slots END ===============
 
 

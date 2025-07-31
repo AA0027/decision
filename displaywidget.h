@@ -37,6 +37,11 @@ private slots:
 
     void play();
 
+    void loading();
+
+signals:
+    void bufferIsNotReady();
+
 private:
     QLabel* videoView;
     QLabel* frameInfo;
