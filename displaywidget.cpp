@@ -89,6 +89,7 @@ void DisplayWidget::customPushBtn(QPushButton* btn)
 // 재생할 이미지들 준비
 void DisplayWidget::loadImages(const QStringList &imageList)
 {
+    this -> imageList = imageList;
     currentFrame = 0;
     slider->setEnabled(true);
     slider->setRange(0, imageList.size() - 1);
@@ -104,19 +105,27 @@ void DisplayWidget::loadImages(const QStringList &imageList)
     loader->moveToThread(thread);
 
     // 작업 완료 시 처리
-    connect(loader, &ImageLoader::imagesLoaded, this, [=](const std::vector<QPixmap>& loadedImages) {
+    connect(loader, &ImageLoader::imagesLoaded, this, [=](std::vector<QPixmap> loadedImages) {
         loadingMovie->stop();
         videoView->clear();
-        video = loadedImages;
 
-        QMessageBox msgBox;
-        msgBox.setWindowTitle("정보");
-        msgBox.setText("동영상 재생 준비 완료");
-        msgBox.exec();
+        if(video.empty())
+        {
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("정보");
+            msgBox.setText("동영상 재생 준비 완료");
+            msgBox.exec();
+        }
 
-        loader->deleteLater();
-        thread->quit();
-        thread->deleteLater();
+        video.insert(video.end(), loadedImages.begin(), loadedImages.end());
+
+        if(video.size() == imageList.size())
+        {
+            loader->deleteLater();
+            thread->quit();
+            thread->deleteLater();
+        }
+
     });
 
     // 스레드 시작 시 작업 수행
@@ -129,7 +138,8 @@ void DisplayWidget::loadImages(const QStringList &imageList)
 // 동영상 재생/일시정지 (slots)
 void DisplayWidget::controlPlay()
 {
-
+    if(video.empty())
+        return;
     if (isPlaying) {
         timer->stop();
         playBtn->setIcon(QIcon(":/play.png"));
@@ -144,6 +154,9 @@ void DisplayWidget::controlPlay()
 // 동영상 정지
 void DisplayWidget::stop()
 {
+    if(video.empty())
+        return;
+
     timer->stop();
     currentFrame = 0;
     isPlaying = false;
@@ -157,7 +170,7 @@ void DisplayWidget::nextFrame()
 {
     if(!video.empty())
     {
-        currentFrame = (currentFrame + 1) % video.size();
+        currentFrame = (currentFrame + 1) % imageList.size();
         play();
         updateSlider();
     }
@@ -167,8 +180,8 @@ void DisplayWidget::nextFrame()
 // 이전 프레임
 void DisplayWidget::previousFrame()
 {
-    if (!video.empty()) {
-        currentFrame = (currentFrame - 1 + video.size()) % video.size();
+    if (!imageList.empty()) {
+        currentFrame = (currentFrame - 1 + imageList.size()) % imageList.size();
         play();
         updateSlider();
     }
@@ -192,7 +205,7 @@ void DisplayWidget::play()
         );
     videoView->setPixmap(frame);
     frameInfo->setText(
-        QString("프레임: %1 / %2").arg(currentFrame + 1).arg(video.size())
+        QString("프레임: %1 / %2").arg(currentFrame + 1).arg(imageList.size())
         );
 }
 //  ============== slots END ===============
