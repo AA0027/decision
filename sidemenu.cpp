@@ -136,6 +136,8 @@ void SideMenu::preparePlay(const QModelIndex &index)
         imageList.clear();
         imageList = dir.entryList(nameFilters, QDir::Files, QDir::Name);
 
+        display -> clearVideo();
+
         if (imageList.isEmpty()) {
             msgBox.setWindowTitle("정보");
             msgBox.setText("선택한 폴더에 이미지 파일이 없습니다.");
@@ -148,6 +150,8 @@ void SideMenu::preparePlay(const QModelIndex &index)
         for (int i = 0; i < imageList.size(); ++i) {
             imageList[i] = dir.absoluteFilePath(imageList[i]);
         }
+
+        currentFolder = path;
 
         display ->loadImages(imageList);
 
@@ -183,13 +187,27 @@ void SideMenu::deleteFolder()
 
         if (ret == QMessageBox::Yes) {
             // 모델에서 해당 행 삭제
+            QString path = (folderModel -> itemFromIndex(currentIndex)) -> text();
+
+            QFileInfo fileInfo(currentFolder);
+            QString name = fileInfo.fileName();
+            if(path == name)
+            {
+                for(auto itr = folderList.begin(); itr != folderList.end(); itr++)
+                {
+                    if((*itr).contains(path))
+                    {
+                        folderList.erase(itr);
+                        display -> clearVideo();
+                        break;
+                    }
+                }
+
+                currentFolder.clear();
+                imageList.clear();
+            }
             folderModel->removeRow(currentIndex.row());
 
-            // 또는 QStandardItemModel을 사용하는 경우:
-            // QStandardItem *item = viewModel->itemFromIndex(currentIndex);
-            // if (item) {
-            //     viewModel->removeRow(item->row());
-            // }
         }
     }
 

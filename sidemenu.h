@@ -34,7 +34,7 @@ private:
     QStandardItemModel* folderModel;
     QMessageBox msgBox;
     QAction* deleteAction;
-
+    QString currentFolder;
     QString recentPath;
     std::vector<QString> folderList;
     QStringList imageList;

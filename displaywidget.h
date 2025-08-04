@@ -1,5 +1,7 @@
 #pragma once
 
+#include "imageloader.h"
+
 #include <QLabel>
 #include <QObject>
 #include <QPushButton>
@@ -11,6 +13,9 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QObject>
+#include <QThread>
+#include <QMainWindow>
+#include "imageloader.h"
 
 class DisplayWidget : public QWidget
 {
@@ -18,7 +23,7 @@ class DisplayWidget : public QWidget
 public:
     DisplayWidget(QWidget* parent = nullptr);
     void loadImages(const QStringList &imageList);
-
+    void clearVideo();
 private slots:
     // 동영상 재생/정지
     void controlPlay();
@@ -54,14 +59,22 @@ private:
     QTimer* timer;
 
     QStringList imageList;
+    std::vector<QPixmap> originVideo;
     std::vector<QPixmap> video;
+    QMessageBox msgBox;
+
+    QThread* thread;
     int currentFrame;
     bool isPlaying;
 
-    QMessageBox msgBox;
 
 private:
     void customPushBtn(QPushButton* btn);
     void setupTimer();
     void updateSlider();
+
+    // void resizeEvent(QResizeEvent* event) override{
+
+    //     QWidget::resizeEvent(event);
+    // }
 };

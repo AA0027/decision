@@ -68,6 +68,7 @@ DisplayWidget::DisplayWidget(QWidget* parent) : QWidget(parent), isPlaying(false
     screenLayout -> addLayout(bottomLayout);
 
     loadingMovie = new QMovie(":/loading.gif", QByteArray(), this);
+
 }
 
 void DisplayWidget::customPushBtn(QPushButton* btn)
@@ -86,9 +87,7 @@ void DisplayWidget::customPushBtn(QPushButton* btn)
         );
 }
 
-//  ============== slots ===============
 
-// 재생할 이미지들 준비
 void DisplayWidget::loadImages(const QStringList &imageList)
 {
     this -> imageList = imageList;
@@ -102,31 +101,37 @@ void DisplayWidget::loadImages(const QStringList &imageList)
     videoView -> setAlignment(Qt::AlignCenter);
     loadingMovie -> start();
 
-    QThread* thread = new QThread;
+    thread = new QThread;
     ImageLoader* loader = new ImageLoader(imageList, videoView);
     loader->moveToThread(thread);
 
     // 작업 완료 시 처리
-    connect(loader, &ImageLoader::imagesLoaded, this, [=](std::vector<QPixmap> loadedImages) {
-        loadingMovie->stop();
-        videoView->clear();
+    connect(loader, &ImageLoader::imagesLoaded, this, [=](std::vector<QPixmap> loadedImages, std::vector<QPixmap> scaledImages) {
 
-        if(video.empty())
-        {
+
+        QMetaObject::invokeMethod(this, [=](){
+
+            loadingMovie->stop();
+            videoView->clear();
+
+
             QMessageBox msgBox;
             msgBox.setWindowTitle("정보");
             msgBox.setText("동영상 재생 준비 완료");
             msgBox.exec();
-        }
 
-        video.insert(video.end(), loadedImages.begin(), loadedImages.end());
+            originVideo = loadedImages;
+            video = scaledImages;
 
-        if(video.size() == imageList.size())
-        {
-            loader->deleteLater();
-            thread->quit();
-            thread->deleteLater();
-        }
+            if(video.size() == imageList.size())
+            {
+                loader->deleteLater();
+                thread->quit();
+                thread->deleteLater();
+            }
+
+            videoView->setPixmap(video[0]);
+        }, Qt::QueuedConnection);
 
     });
 
@@ -136,6 +141,16 @@ void DisplayWidget::loadImages(const QStringList &imageList)
     // 시작
     thread->start();
 }
+
+void DisplayWidget::clearVideo()
+{
+    imageList.clear();
+    video.clear();
+    frameInfo->setText("프레임: 0 / 0");
+    videoView ->clear();
+}
+
+//  ============== slots ===============
 
 // 동영상 재생/일시정지 (slots)
 void DisplayWidget::controlPlay()
@@ -172,14 +187,13 @@ void DisplayWidget::nextFrame()
 {
     if(!video.empty())
     {
-        if(video.size() == currentFrame + 1)
-        {
-            stop();
-            return;
-        }
-
         if(video.size() <= currentFrame + 1)
         {
+            if(imageList.size() == currentFrame + 1)
+            {
+                stop();
+                return;
+            }
             emit bufferIsNotReady();
             return;
         }
@@ -215,8 +229,10 @@ void DisplayWidget::onSliderChanged(int value)
 // 동영상이 계속 재생되게
 void DisplayWidget::play()
 {
-
-    videoView->setPixmap(video[currentFrame]);
+    QPixmap scaledPixmap = originVideo[currentFrame].scaled( videoView->size(),
+                                         Qt::KeepAspectRatio,
+                                         Qt::SmoothTransformation);
+    videoView->setPixmap(scaledPixmap);
     frameInfo->setText(
         QString("프레임: %1 / %2").arg(currentFrame + 1).arg(imageList.size())
         );
