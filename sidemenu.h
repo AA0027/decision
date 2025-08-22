@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QThread>
+#include <QFileSystemModel>
 
 #include "displaywidget.h"
 
@@ -30,8 +31,13 @@ private slots:
     void deleteFolder();
 private:
     DisplayWidget* display;
+
     QTreeView* folderView;
     QStandardItemModel* folderModel;
+
+    QTreeView* sideView;
+    QFileSystemModel* fileSystemModel;
+
     QMessageBox msgBox;
     QAction* deleteAction;
     QString currentFolder;
