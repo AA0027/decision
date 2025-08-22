@@ -7,7 +7,7 @@ SideMenu::SideMenu(QWidget* parent) : QWidget(parent)
 
 
     // folderView = new QTreeView();
-    // folderModel = new QStandardItemModel(this);
+    folderModel = new QStandardItemModel(this);
 
     // folderView -> setModel(folderModel);
     // folderView -> setHeaderHidden(true);
@@ -18,12 +18,16 @@ SideMenu::SideMenu(QWidget* parent) : QWidget(parent)
     fileSystemModel = new QFileSystemModel();
     fileSystemModel -> setRootPath(QDir::rootPath());
 
-    fileSystemModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Files);
-    // 이미지 파일 확장자 지정
-    fileSystemModel->setNameFilters(QStringList() << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.gif");
-    fileSystemModel->setNameFilterDisables(false);
+    fileSystemModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Files);
+
+    // 이미지 파일 확장자만 허용
+    QStringList filters;
+    filters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.gif";
+    fileSystemModel->setNameFilters(filters);
+    fileSystemModel->setNameFilterDisables(false); // 필터에 맞지 않는 파일은 안 보이게
 
     sideView = new QTreeView();
+    sideView -> setModel(folderModel);
 
     deleteAction = new QAction("삮제");
     connect(sideView, &QTreeView::customContextMenuRequested,
@@ -43,6 +47,37 @@ SideMenu::SideMenu(QWidget* parent) : QWidget(parent)
 void SideMenu::insertWidget(DisplayWidget* displayWidget)
 {
     display = displayWidget;
+}
+
+void SideMenu::selectFolder()
+{
+    if(!sideView->model())
+    {
+        sideView->setModel(fileSystemModel);
+        sideView -> setColumnHidden(1, true);
+        sideView -> setColumnHidden(2, true);
+        sideView -> setColumnHidden(3, true);
+        sideView -> setEditTriggers(QAbstractItemView::NoEditTriggers);
+    }
+
+    QString path;
+    QString startPath = recentPath.isEmpty() ? QDir::homePath() : recentPath;
+
+    path = QFileDialog::getExistingDirectory(this, "폴더선택", startPath, QFileDialog::ShowDirsOnly);
+
+    if (path.isEmpty()) {
+        return;
+    }
+
+    recentPath = path;
+    QStandardItem* rootNode = folderModel -> invisibleRootItem();
+
+
+    QModelIndex rootIndex = fileSystemModel->index(path);
+    sideView->setRootIndex(rootIndex);
+
+
+
 }
 
 // ================ slots =======================
@@ -117,31 +152,7 @@ void SideMenu::insertWidget(DisplayWidget* displayWidget)
 // }
 
 
-void SideMenu::selectFolder()
-{
-    sideView -> setModel(fileSystemModel);
 
-    QString path;
-    QString startPath = recentPath.isEmpty() ? QDir::homePath() : recentPath;
-
-    path = QFileDialog::getExistingDirectory(this, "폴더선택", startPath, QFileDialog::ShowDirsOnly);
-
-    if (path.isEmpty()) {
-        return;
-    }
-
-    recentPath = path;
-
-    QModelIndex rootIndex = fileSystemModel->index(path);
-
-    sideView->setRootIndex(rootIndex);
-
-    sideView -> setColumnHidden(1, true);
-    sideView -> setColumnHidden(2, true);
-    sideView -> setColumnHidden(3, true);
-    sideView -> setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-}
 // 더블클릭시 재생준비
 void SideMenu::preparePlay(const QModelIndex &index)
 {
