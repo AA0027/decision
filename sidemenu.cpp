@@ -19,9 +19,6 @@ SideMenu::SideMenu(QWidget* parent) : QWidget(parent)
     connect(tree, &QTreeWidget::customContextMenuRequested,
             this, &SideMenu::showContextMenu);
 
-    connect(tree, &QTreeWidget::doubleClicked,
-            this, &SideMenu::preparePlay);
-
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(tree);
     setLayout(layout);
