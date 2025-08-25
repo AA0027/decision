@@ -12,6 +12,8 @@
 #include <QMenu>
 #include <QThread>
 #include <QFileSystemModel>
+#include <QListWidget>
+#include <QTreeWidget>
 
 #include "displaywidget.h"
 
@@ -24,24 +26,18 @@ public:
 
 public slots:
     void selectFolder();
-    void preparePlay(const QModelIndex &index);
+    void preparePlay();
 
 private slots:
     void showContextMenu(const QPoint &pos);
-    void deleteFolder();
 private:
     DisplayWidget* display;
 
-    QTreeView* folderView;
-    QStandardItemModel* folderModel;
-
-    QTreeView* sideView;
-    QFileSystemModel* fileSystemModel;
+    QTreeWidget* tree;
 
     QMessageBox msgBox;
     QAction* deleteAction;
-    QString currentFolder;
+    QString selectedFolder;
     QString recentPath;
-    std::vector<QString> folderList;
     QStringList imageList;
 };

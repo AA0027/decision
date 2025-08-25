@@ -1,45 +1,29 @@
 #include "sidemenu.h"
 
+#include <QApplication>
+
 
 SideMenu::SideMenu(QWidget* parent) : QWidget(parent)
 {
     setMaximumWidth(250);
 
+    tree = new QTreeWidget(this);
+    tree -> setContextMenuPolicy(Qt::CustomContextMenu);
+    tree -> setColumnCount(2);
+    tree -> hideColumn(1);
 
-    // folderView = new QTreeView();
-    folderModel = new QStandardItemModel(this);
+    tree -> setHeaderLabel("폴더 구조");
 
-    // folderView -> setModel(folderModel);
-    // folderView -> setHeaderHidden(true);
-    // folderView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    // folderView -> setContextMenuPolicy(Qt::CustomContextMenu);
-
-
-    fileSystemModel = new QFileSystemModel();
-    fileSystemModel -> setRootPath(QDir::rootPath());
-
-    fileSystemModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Files);
-
-    // 이미지 파일 확장자만 허용
-    QStringList filters;
-    filters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.gif";
-    fileSystemModel->setNameFilters(filters);
-    fileSystemModel->setNameFilterDisables(false); // 필터에 맞지 않는 파일은 안 보이게
-
-    sideView = new QTreeView();
-    sideView -> setModel(folderModel);
 
     deleteAction = new QAction("삮제");
-    connect(sideView, &QTreeView::customContextMenuRequested,
+    connect(tree, &QTreeWidget::customContextMenuRequested,
             this, &SideMenu::showContextMenu);
 
-    connect(sideView, &QTreeView::doubleClicked,
+    connect(tree, &QTreeWidget::doubleClicked,
             this, &SideMenu::preparePlay);
 
-    connect(deleteAction, &QAction::triggered, this, &SideMenu::deleteFolder);
-
     QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->addWidget(sideView);
+    layout->addWidget(tree);
     setLayout(layout);
 
 }
@@ -49,216 +33,138 @@ void SideMenu::insertWidget(DisplayWidget* displayWidget)
     display = displayWidget;
 }
 
+
+
+// ================ slots =======================
 void SideMenu::selectFolder()
 {
-    if(!sideView->model())
-    {
-        sideView->setModel(fileSystemModel);
-        sideView -> setColumnHidden(1, true);
-        sideView -> setColumnHidden(2, true);
-        sideView -> setColumnHidden(3, true);
-        sideView -> setEditTriggers(QAbstractItemView::NoEditTriggers);
-    }
-
     QString path;
-    QString startPath = recentPath.isEmpty() ? QDir::homePath() : recentPath;
+    QString startPath = recentPath.isEmpty() ? QDir::rootPath() : recentPath;
 
-    path = QFileDialog::getExistingDirectory(this, "폴더선택", startPath, QFileDialog::ShowDirsOnly);
+    path = QFileDialog::getExistingDirectory(this, "폴더선택", startPath
+                                             , QFileDialog::ShowDirsOnly);
 
     if (path.isEmpty()) {
         return;
     }
+    tree -> clear();
 
     recentPath = path;
-    QStandardItem* rootNode = folderModel -> invisibleRootItem();
 
 
-    QModelIndex rootIndex = fileSystemModel->index(path);
-    sideView->setRootIndex(rootIndex);
+    QDir dir(path);
+
+    QDir::Filters filters = QDir::NoDotAndDotDot | QDir::Dirs | QDir::Files | QDir::Readable;
+    // filters &= ~QDir::Hidden;
+
+    QStringList imageExtensions = {"png"};
+
+    QFileInfoList list = dir.entryInfoList(filters, QDir::DirsFirst);
+
+    // 파일만 다시 거르기
+    QFileInfoList filtered;
+    for (const QFileInfo &info : list) {
+        if (info.isDir() || imageExtensions.contains(info.suffix(), Qt::CaseInsensitive)) {
+            filtered << info;
+        }
+    }
 
 
+    QTreeWidgetItem* rootItem = new QTreeWidgetItem(tree);
+    rootItem -> setText(0, dir.dirName());
+    rootItem -> setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    rootItem -> setText(1, dir.absolutePath());
 
+    for(const QFileInfo& entry : filtered)
+    {
+        QTreeWidgetItem* item = new QTreeWidgetItem(rootItem);
+        item -> setText(0, entry.fileName());
+        item -> setText(1, entry.filePath());
+        if (entry.isDir()) {
+            item -> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_DirIcon));
+
+            QString dirPath = entry.filePath();
+            QDir d(dirPath);
+            QFileInfoList l = d.entryInfoList( QDir::Files);
+
+            for(const QFileInfo& e : l)
+            {
+                QTreeWidgetItem* i = new QTreeWidgetItem(item);
+                i -> setText(0, e.fileName());
+                i -> setText(1, e.filePath());
+                i-> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_FileIcon));
+            }
+
+
+        } else {
+            item -> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_FileIcon));
+        }
+    }
+
+    tree->addTopLevelItem(rootItem);
+    rootItem->setExpanded(true);
 }
 
-// ================ slots =======================
-// 메뉴에서 파일 선택할떄 (slots)
-// void SideMenu::selectFolder()
-// {
-//     QString path;
 
-//     if(recentPath == "")
-//     {
-//         path = QFileDialog::getExistingDirectory(this, "select",
-//                                                  QDir::homePath(), QFileDialog::ShowDirsOnly);
-//         if (path.isEmpty()) {
-//             return;
-//         }
-//         recentPath = path;
-//     }
-//     else
-//     {
-//         path = QFileDialog::getExistingDirectory(this, "select",
-//                                                  recentPath, QFileDialog::ShowDirsOnly);
-//         if (path.isEmpty()) {
-//             return;
-//         }
-//         recentPath = path;
-//     }
-
-//     QStandardItem* rootNode = folderModel -> invisibleRootItem();
-
-//     if(folderList.size() > 4)
-//     {
-//         msgBox.setWindowTitle("경고");
-//         msgBox.setText("폴더추가 불가");
-//         msgBox.exec();
-
-//         return;
-//     }
-
-//     folderList.emplace_back(path);
-
-//     QDir dir(path);
-//     QIcon folderIcon = style() -> standardIcon(QStyle::SP_DirIcon);
-//     QIcon imageIcon = style() -> standardIcon(QStyle::SP_FileIcon);
-//     QStringList imageFiles;
-//     QStringList filters;
-//     filters << "*.jpg" << "*.jpeg" << "*.png" << "*.bmp" << "*.gif";
-
-
-
-//     dir.setNameFilters(filters);
-//     dir.setFilter(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot);
-//     imageFiles = dir.entryList();
-
-//     QStandardItem* includeFolder = new QStandardItem(folderIcon, dir.dirName());
-//     QList<QStandardItem*> subFiles;
-
-
-//     for(int i = 0; i < 5; i++)
-//     {
-//         subFiles.emplaceBack(new QStandardItem(imageIcon, imageFiles[i]));
-//     }
-
-//     subFiles.emplaceBack(new QStandardItem("..."));
-
-//     rootNode -> appendRow(includeFolder);
-//     includeFolder -> appendColumn(subFiles);
-
-//     msgBox.setWindowTitle("정보");
-//     msgBox.setText(QString("총 %1개의 이미지를 불러왔습니다.").arg(imageFiles.size()));
-
-//     msgBox.exec();
-// }
-
-
-
-// 더블클릭시 재생준비
-void SideMenu::preparePlay(const QModelIndex &index)
+void SideMenu::preparePlay()
 {
-    if(!index.parent().isValid())
+    imageList.clear();
+
+    QStringList allowedExtensions = {"*.png"};
+    QFileInfo info(selectedFolder);
+    QDir d(selectedFolder);
+
+
+    if(info.isFile())
     {
-        if(!index.isValid())
-        {
-            msgBox.setWindowTitle("경고");
-            msgBox.setText("유효하지 않는 폴더입니다.");
-            msgBox.exec();
+        msgBox.setWindowTitle("정보");
+        msgBox.setText("폴더를 선택해주세요");
+        msgBox.exec();
 
-            return;
-        }
-
-        QStandardItem *item = folderModel -> itemFromIndex(index);
-        QString path = item -> text();
-
-        for(int i = 0; i < folderList.size(); i++)
-        {
-            if(folderList[i].contains(path))
-                path = folderList[i];
-        }
-
-        QDir dir(path);
-
-        QStringList nameFilters;
-        nameFilters << "*.jpg" << "*.jpeg" << "*.png" << "*.bmp" << "*.gif" << "*.tiff";
-
-        imageList.clear();
-        imageList = dir.entryList(nameFilters, QDir::Files, QDir::Name);
-
-        display -> clearVideo();
-
-        if (imageList.isEmpty()) {
-            msgBox.setWindowTitle("정보");
-            msgBox.setText("선택한 폴더에 이미지 파일이 없습니다.");
-            msgBox.exec();
-
-            return;
-        }
-
-        // 전체 경로로 변환
-        for (int i = 0; i < imageList.size(); ++i) {
-            imageList[i] = dir.absoluteFilePath(imageList[i]);
-        }
-
-        currentFolder = path;
-
-        display ->loadImages(imageList);
-
+        return;
     }
+
+    d.setNameFilters(allowedExtensions);
+    d.setFilter(QDir::Files);
+
+    imageList = d.entryList();
+
+    if(imageList.isEmpty())
+    {
+        msgBox.setWindowTitle("정보");
+        msgBox.setText("이미지가 존재하지 않습니다.");
+        msgBox.exec();
+
+        return;
+    }
+
+    display -> clearVideo();
+
+    for(int i = 0; i < imageList.size(); i++)
+    {
+        imageList[i] = d.absoluteFilePath(imageList[i]);
+    }
+
+    display -> loadImages(imageList);
 }
 
 // 폴더 우클릭스 컨텍스트 메뉴창 띄움 (slots)
 void SideMenu::showContextMenu(const QPoint &pos)
 {
-    QModelIndex index = folderView->indexAt(pos);
 
-    // 유효한 인덱스이고, 최상위 루트 아이템인지 확인
-    if (index.isValid() && index.parent() == QModelIndex()) {
-        QMenu contextMenu(this);
-        contextMenu.addAction(deleteAction);
+    QTreeWidgetItem* item = tree -> itemAt(pos);
 
-        // 글로벌 좌표로 변환하여 메뉴 표시
-        contextMenu.exec(folderView->mapToGlobal(pos));
-    }
-}
+    if(!item)
+        return;
 
-// 선택됀 폴더 삭제 (slots)
-void SideMenu::deleteFolder()
-{
-    QModelIndex currentIndex = folderView->currentIndex();
+    selectedFolder = item->text(1);
 
-    // 최상위 루트 아이템인지 다시 한번 확인
-    if (currentIndex.isValid() && currentIndex.parent() == QModelIndex()) {
-        // 사용자 확인 대화상자 (선택사항)
-        int ret = QMessageBox::question(this, "삭제 확인",
-                                        "선택한 항목을 삭제하시겠습니까?",
-                                        QMessageBox::Yes | QMessageBox::No);
+    QMenu contextMenu(this);
 
-        if (ret == QMessageBox::Yes) {
-            // 모델에서 해당 행 삭제
-            QString path = (folderModel -> itemFromIndex(currentIndex)) -> text();
+    QAction* playAction = contextMenu.addAction("재생");
 
-            QFileInfo fileInfo(currentFolder);
-            QString name = fileInfo.fileName();
-            if(path == name)
-            {
-                for(auto itr = folderList.begin(); itr != folderList.end(); itr++)
-                {
-                    if((*itr).contains(path))
-                    {
-                        folderList.erase(itr);
-                        display -> clearVideo();
-                        break;
-                    }
-                }
-
-                currentFolder.clear();
-                imageList.clear();
-            }
-            folderModel->removeRow(currentIndex.row());
-
-        }
-    }
-
+    connect(playAction, &QAction::triggered, this, &SideMenu::preparePlay);
+    contextMenu.exec(tree -> mapToGlobal(pos));
 }
 
 // ================ END slots =======================
