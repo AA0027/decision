@@ -6,7 +6,6 @@
 #include <QStandardItemModel>
 #include <QTreeView>
 #include <QWidget>
-#include <vector>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QMenu>
@@ -14,6 +13,7 @@
 #include <QFileSystemModel>
 #include <QListWidget>
 #include <QTreeWidget>
+#include <QCheckBox>
 
 #include "displaywidget.h"
 
@@ -30,13 +30,14 @@ public slots:
 
 private slots:
     void showContextMenu(const QPoint &pos);
+    void colapseFolder(Qt::CheckState state);
 private:
     DisplayWidget* display;
-
-    QTreeWidget* tree;
-
+    QCheckBox* treeRoot;
+    QTreeView* treeView;
+    QFileSystemModel* model;
+    QAction* playAction;
     QMessageBox msgBox;
-    QAction* deleteAction;
     QString selectedFolder;
     QString recentPath;
     QStringList imageList;
