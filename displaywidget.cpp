@@ -15,7 +15,8 @@ DisplayWidget::DisplayWidget(QWidget* parent) : QWidget(parent), isPlaying(false
     videoView = new QLabel();
     videoView -> setAlignment(Qt::AlignCenter);
     videoView -> setMinimumSize(640, 480);
-    videoView ->setStyleSheet("border: 1px solid gray;");
+    videoView ->setStyleSheet("border: 1px solid gray;"
+                             "background-color: #000000;");
 
     QHBoxLayout* bottomLayout = new QHBoxLayout();
     QHBoxLayout* controlLayout = new QHBoxLayout();

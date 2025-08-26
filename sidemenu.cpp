@@ -55,12 +55,13 @@ void SideMenu::selectFolder()
     // filters &= ~QDir::Hidden;
 
     QStringList imageExtensions = {"png"};
+    QStringList imgExt = {".png"};
 
     QFileInfoList list = dir.entryInfoList(filters, QDir::DirsFirst);
 
     // 파일만 다시 거르기
     QFileInfoList filtered;
-    for (const QFileInfo &info : list) {
+    for (const QFileInfo &info : std::as_const(list)) {
         if (info.isDir() || imageExtensions.contains(info.suffix(), Qt::CaseInsensitive)) {
             filtered << info;
         }
@@ -72,29 +73,43 @@ void SideMenu::selectFolder()
     rootItem -> setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
     rootItem -> setText(1, dir.absolutePath());
 
-    for(const QFileInfo& entry : filtered)
+    for(const QFileInfo& entry : std::as_const(filtered))
     {
-        QTreeWidgetItem* item = new QTreeWidgetItem(rootItem);
-        item -> setText(0, entry.fileName());
-        item -> setText(1, entry.filePath());
+
         if (entry.isDir()) {
+            QTreeWidgetItem* item = new QTreeWidgetItem(rootItem);
+            item -> setText(0, entry.fileName());
+            item -> setText(1, entry.filePath());
             item -> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_DirIcon));
 
             QString dirPath = entry.filePath();
             QDir d(dirPath);
-            QFileInfoList l = d.entryInfoList( QDir::Files);
+            QFileInfoList stateDir = d.entryInfoList(QDir::Dirs| QDir::NoDotAndDotDot);
 
-            for(const QFileInfo& e : l)
+            if(!stateDir.empty())
             {
-                QTreeWidgetItem* i = new QTreeWidgetItem(item);
-                i -> setText(0, e.fileName());
-                i -> setText(1, e.filePath());
-                i-> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_FileIcon));
+                for(const QFileInfo& e : std::as_const(stateDir))
+                {
+                    QTreeWidgetItem* i = new QTreeWidgetItem(item);
+                    i -> setText(0, e.fileName());
+                    i -> setText(1, e.filePath());
+                    i-> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_DirIcon));
+
+                    QString subPath = e.filePath();
+                    QDir subDir(subPath);
+                    QFileInfoList files = subDir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+
+
+                    for(const QFileInfo& f : std::as_const(files))
+                    {
+                        QTreeWidgetItem* img = new QTreeWidgetItem(i);
+                        img -> setText(0, e.fileName());
+                        img -> setText(1, e.filePath());
+                        img-> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_FileIcon));
+                    }
+                }
             }
 
-
-        } else {
-            item -> setIcon(0, QApplication::style() -> standardIcon(QStyle::SP_FileIcon));
         }
     }
 
