@@ -210,11 +210,23 @@ void DisplayWidget::nextFrame()
 // 이전 프레임
 void DisplayWidget::previousFrame()
 {
-    if (!imageList.empty()) {
+    if(!video.empty())
+    {
+        if(video.size() <= currentFrame + 1)
+        {
+            if(imageList.size() == currentFrame + 1)
+            {
+                stop();
+                return;
+            }
+            emit bufferIsNotReady();
+            return;
+        }
         // vector 에러처리필요?
-        currentFrame = (currentFrame - 1 + imageList.size());
+        currentFrame = (currentFrame - 1);
         play();
         updateSlider();
+
     }
 }
 
