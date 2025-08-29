@@ -28,6 +28,6 @@ Decision::Decision(QWidget* parent) : QMainWindow(parent)
     decisionWidget -> setLayout(layout);
     setCentralWidget(decisionWidget);
 
-    setWindowTitle(tr("판단 Simulatort"));
+    setWindowTitle(tr("decisionPlayer"));
 
 }

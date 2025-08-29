@@ -132,6 +132,9 @@ void DisplayWidget::loadImages(const QStringList &imageList)
             }
 
             videoView->setPixmap(video[0]);
+            frameInfo->setText(
+                QString("프레임: %1 / %2").arg(0).arg(imageList.size())
+                );
         }, Qt::QueuedConnection);
 
     });

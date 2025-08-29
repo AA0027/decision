@@ -8,7 +8,7 @@ SideMenu::SideMenu(QWidget* parent) : QWidget(parent)
     setMaximumWidth(250);
 
     model = new QFileSystemModel();
-    model->setNameFilters(QStringList() << "*.png");
+    model->setNameFilters(QStringList() << "*.png" << "*.jpg");
     model->setNameFilterDisables(false);
 
     treeView = new QTreeView();
